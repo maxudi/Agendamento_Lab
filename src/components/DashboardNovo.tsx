@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { supabase, AgendamentoLaboratorio } from "../lib/supabase"
+import { useAuth } from "../contexts/AuthContext"
 
 export default function DashboardNovo() {
+  const { isAdmin } = useAuth()
   const [agendamentos, setAgendamentos] = useState<AgendamentoLaboratorio[]>([])
   const [loading, setLoading] = useState(true)
   const [filtro, setFiltro] = useState('')
@@ -292,16 +294,18 @@ export default function DashboardNovo() {
                   )}
                 </div>
 
-                {/* Botão Excluir */}
-                <div className="p-4 bg-gray-50">
-                  <button
-                    onClick={() => agendamento.id && handleDelete(agendamento.id)}
-                    className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-lg transition-all font-bold flex items-center justify-center space-x-2"
-                  >
-                    <span>🗑️</span>
-                    <span>Excluir Agendamento</span>
-                  </button>
-                </div>
+                {/* Botão Excluir - Apenas para Administradores */}
+                {isAdmin && (
+                  <div className="p-4 bg-gray-50">
+                    <button
+                      onClick={() => agendamento.id && handleDelete(agendamento.id)}
+                      className="w-full px-6 py-3 bg-gradient-to-r from-red-500 to-red-600 text-white rounded-xl hover:shadow-lg transition-all font-bold flex items-center justify-center space-x-2"
+                    >
+                      <span>🗑️</span>
+                      <span>Excluir Agendamento</span>
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
