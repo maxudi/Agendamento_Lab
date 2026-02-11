@@ -166,11 +166,34 @@ O sistema foi verificado e está **funcionando corretamente**:
 - ✅ TypeScript configurado corretamente
 - ✅ Integração com Supabase configurada
 
+## � Deploy em Produção
+
+### Easypanel (Recomendado)
+
+Este projeto está pronto para deploy no Easypanel. Consulte o guia completo em **[DEPLOY.md](DEPLOY.md)** para instruções detalhadas.
+
+**Resumo rápido:**
+1. Build Command: `npm run build`
+2. Start Command: `npm run start`
+3. Port: `3000`
+4. Variáveis de ambiente necessárias:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+
+### Outras Plataformas
+
+O projeto também pode ser deployado em:
+- **Vercel**: Conecte o repositório GitHub
+- **Netlify**: Configure build com `npm run build` e pasta `dist`
+- **Railway**: Adicione as variáveis de ambiente
+- **Render**: Configure `npm run build` && `npm run start`
+
 ## 🔧 Scripts Disponíveis
 
 - `npm run dev` - Inicia o servidor de desenvolvimento
 - `npm run build` - Compila o projeto para produção
-- `npm run preview` - Visualiza o build de produção
+- `npm run start` - Serve o build de produção (para deploy)
+- `npm run preview` - Visualiza o build de produção localmente
 - `npm run lint` - Executa o linter
 // eslint.config.js
 import reactX from 'eslint-plugin-react-x'
