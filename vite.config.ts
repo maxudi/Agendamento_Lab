@@ -2,9 +2,9 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
-  // Define a base como vazia ou './' para que os caminhos sejam relativos ao index.html
-  base: './', 
+export default defineConfig(({ command }) => ({
+  // Use base relativo apenas no build, não no dev
+  base: command === 'build' ? './' : '/',
   plugins: [
     react({
       babel: {
@@ -20,4 +20,4 @@ export default defineConfig({
     // Limpa a pasta antes de cada build
     emptyOutDir: true,
   }
-})
+}))
