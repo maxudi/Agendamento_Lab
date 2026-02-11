@@ -168,7 +168,18 @@ O sistema foi verificado e está **funcionando corretamente**:
 
 ## � Deploy em Produção
 
-### Easypanel (Recomendado)
+## 🚀 Deploy em Produção
+
+### Docker (Recomendado para Auto-hospedagem)
+
+**Build e execução rápida:**
+```bash
+docker-compose up -d
+```
+
+Veja instruções completas em **[DEPLOY.md](DEPLOY.md)**.
+
+### Easypanel
 
 Este projeto está pronto para deploy no Easypanel. Consulte o guia completo em **[DEPLOY.md](DEPLOY.md)** para instruções detalhadas.
 
@@ -183,6 +194,7 @@ Este projeto está pronto para deploy no Easypanel. Consulte o guia completo em 
 ### Outras Plataformas
 
 O projeto também pode ser deployado em:
+- **Docker**: Use o Dockerfile incluído
 - **Vercel**: Conecte o repositório GitHub
 - **Netlify**: Configure build com `npm run build` e pasta `dist`
 - **Railway**: Adicione as variáveis de ambiente

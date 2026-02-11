@@ -65,7 +65,73 @@ Após o deploy, verifique se:
 - [ ] O dashboard carrega os dados do Supabase
 - [ ] É possível criar novos agendamentos
 
-### Troubleshooting
+---
+
+## 🐳 Deploy com Docker
+
+### Opção 1: Docker Run
+
+```bash
+# Build da imagem
+docker build \
+  --build-arg VITE_SUPABASE_URL=https://seu-projeto.supabase.co \
+  --build-arg VITE_SUPABASE_ANON_KEY=sua_chave_anonima \
+  -t agendamento-labs .
+
+# Executar container
+docker run -d \
+  --name agendamento-labs \
+  -p 3000:3000 \
+  --restart unless-stopped \
+  agendamento-labs
+```
+
+### Opção 2: Docker Compose (Recomendado)
+
+1. **Crie um arquivo `.env` na raiz do projeto:**
+
+```env
+VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+VITE_SUPABASE_ANON_KEY=sua_chave_anonima_aqui
+```
+
+2. **Execute o Docker Compose:**
+
+```bash
+docker-compose up -d
+```
+
+3. **Acesse:** http://localhost:3000
+
+### Easypanel com Docker
+
+O Easypanel detecta automaticamente o Dockerfile. Basta:
+
+1. Conectar o repositório GitHub
+2. Adicionar as variáveis de ambiente:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. O Easypanel fará o build e deploy automático
+
+### Comandos Úteis Docker
+
+```bash
+# Ver logs
+docker logs agendamento-labs -f
+
+# Parar container
+docker stop agendamento-labs
+
+# Remover container
+docker rm agendamento-labs
+
+# Rebuild
+docker-compose up -d --build
+```
+
+---
+
+## Troubleshooting
 
 **Erro: "Cannot find module 'vite'"**
 - Verifique se o `npm install` foi executado antes do build

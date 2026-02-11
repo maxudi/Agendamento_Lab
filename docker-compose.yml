@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  agendamento-labs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    container_name: agendamento-labs
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 40s
+
+# Para usar este arquivo:
+# 1. Crie um arquivo .env na raiz do projeto com:
+#    VITE_SUPABASE_URL=https://seu-projeto.supabase.co
+#    VITE_SUPABASE_ANON_KEY=sua_chave_anonima_aqui
+#
+# 2. Execute: docker-compose up -d
+# 3. Acesse: http://localhost:3000
