@@ -1,0 +1,574 @@
+import { useState, useEffect, FormEvent } from "react"
+import { supabase, CronogramaAula, AgendamentoLaboratorio, Laboratorio } from "../lib/supabase"
+import { DayPicker } from "react-day-picker"
+import "react-day-picker/dist/style.css"
+
+// Dados dos laboratórios com capacidade
+const LABORATORIOS: Laboratorio[] = [
+  { id: 'C30', nome: 'Laboratório C30', capacidade: 40 },
+  { id: 'C31', nome: 'Laboratório C31', capacidade: 40 },
+  { id: 'C32', nome: 'Laboratório C32', capacidade: 40 },
+  { id: 'C33', nome: 'Laboratório C33', capacidade: 40 },
+  { id: 'C34', nome: 'Laboratório C34', capacidade: 40 },
+  { id: 'C35', nome: 'Laboratório C35', capacidade: 40 },
+  { id: 'C36', nome: 'Laboratório C36', capacidade: 40 },
+  { id: 'C37', nome: 'Laboratório C37', capacidade: 40 },
+  { id: 'C38', nome: 'Laboratório C38', capacidade: 40 },
+  { id: 'C39', nome: 'Laboratório C39', capacidade: 40 },
+]
+
+const DIAS_SEMANA_MAP: { [key: number]: string } = {
+  0: 'Dom',
+  1: 'Seg',
+  2: 'Ter',
+  3: 'Qua',
+  4: 'Qui',
+  5: 'Sex',
+  6: 'Sáb'
+}
+
+const TURNOS = [
+  { id: 'Matutino', nome: 'Matutino', codigo: 'M' },
+  { id: 'Vespertino', nome: 'Vespertino', codigo: 'V' },
+  { id: 'Noturno', nome: 'Noturno', codigo: 'N' }
+]
+
+export default function NovoAgendamentoForm() {
+  // Estados para dados do banco
+  const [cronogramas, setCronogramas] = useState<CronogramaAula[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Estados para seleção de datas e filtros
+  const [selectedDates, setSelectedDates] = useState<Date[]>([])
+  const [diasSemanaSelecionados, setDiasSemanaSelecionados] = useState<string[]>([])
+
+  // Estados para filtros dinâmicos
+  const [professoresFiltrados, setProfessoresFiltrados] = useState<string[]>([])
+  const [disciplinasFiltradas, setDisciplinasFiltradas] = useState<string[]>([])
+
+  // Estado do formulário
+  const [form, setForm] = useState({
+    professor_id: '',
+    disciplina_id: '',
+    email_contato: '',
+    telefone: '',
+    turno: '',
+    laboratorio_id: '',
+    pratica_realizada: '',
+    software_utilizado: '',
+    necessita_internet: false,
+    quantidade_alunos: '',
+    observacao: '',
+    uso_kit_multimidia: false
+  })
+
+  // Buscar cronogramas ao montar o componente
+  useEffect(() => {
+    fetchCronogramas()
+  }, [])
+
+  async function fetchCronogramas() {
+    try {
+      const { data, error } = await supabase
+        .from('cronograma_aulas')
+        .select('*')
+      
+      if (error) throw error
+      setCronogramas(data || [])
+    } catch (error) {
+      console.error('Erro ao buscar cronogramas:', error)
+      alert('Erro ao carregar dados do cronograma')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Atualizar dias da semana quando as datas mudarem
+  useEffect(() => {
+    if (selectedDates.length > 0) {
+      const dias = selectedDates.map(date => DIAS_SEMANA_MAP[date.getDay()])
+      const diasUnicos = Array.from(new Set(dias))
+      setDiasSemanaSelecionados(diasUnicos)
+    } else {
+      setDiasSemanaSelecionados([])
+    }
+  }, [selectedDates])
+
+  // Filtrar professores e disciplinas baseado nas datas selecionadas
+  useEffect(() => {
+    if (diasSemanaSelecionados.length > 0) {
+      // Filtrar cronogramas que correspondem aos dias da semana selecionados
+      const cronogramasFiltrados = cronogramas.filter(c => 
+        diasSemanaSelecionados.includes(c.dia_semana)
+      )
+
+      // Extrair professores únicos
+      const profs = Array.from(new Set(cronogramasFiltrados.map(c => c.professor)))
+      setProfessoresFiltrados(profs)
+
+      // Se o professor atual não está na lista filtrada, limpar seleção
+      if (form.professor_id && !profs.includes(form.professor_id)) {
+        setForm(prev => ({ ...prev, professor_id: '', disciplina_id: '' }))
+      }
+    } else {
+      // Se não há datas selecionadas, mostrar todos os professores
+      const profs = Array.from(new Set(cronogramas.map(c => c.professor)))
+      setProfessoresFiltrados(profs)
+    }
+  }, [diasSemanaSelecionados, cronogramas])
+
+  // Filtrar disciplinas baseado no professor selecionado e datas
+  useEffect(() => {
+    if (form.professor_id) {
+      let cronogramasFiltrados = cronogramas.filter(c => c.professor === form.professor_id)
+      
+      // Se houver dias da semana selecionados, filtrar também por isso
+      if (diasSemanaSelecionados.length > 0) {
+        cronogramasFiltrados = cronogramasFiltrados.filter(c => 
+          diasSemanaSelecionados.includes(c.dia_semana)
+        )
+      }
+
+      const discs = Array.from(new Set(cronogramasFiltrados.map(c => c.disciplina)))
+      setDisciplinasFiltradas(discs)
+
+      // Se a disciplina atual não está na lista filtrada, limpar
+      if (form.disciplina_id && !discs.includes(form.disciplina_id)) {
+        setForm(prev => ({ ...prev, disciplina_id: '' }))
+      }
+    } else {
+      setDisciplinasFiltradas([])
+      setForm(prev => ({ ...prev, disciplina_id: '' }))
+    }
+  }, [form.professor_id, diasSemanaSelecionados, cronogramas])
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+
+    // Validações
+    if (selectedDates.length === 0) {
+      alert('Por favor, selecione pelo menos uma data')
+      return
+    }
+
+    if (!form.professor_id || !form.disciplina_id) {
+      alert('Por favor, selecione o professor e a disciplina')
+      return
+    }
+
+    if (!form.laboratorio_id) {
+      alert('Por favor, selecione um laboratório')
+      return
+    }
+
+    if (!form.quantidade_alunos || parseInt(form.quantidade_alunos) <= 0) {
+      alert('Por favor, informe a quantidade de alunos')
+      return
+    }
+
+    try {
+      // Verificar conflitos para cada data selecionada
+      for (const date of selectedDates) {
+        const dataISO = date.toISOString().split('T')[0]
+        
+        const { data: conflitos } = await supabase
+          .from('agendamentos_laboratorio')
+          .select('*')
+          .contains('datas_selecionadas', [dataISO])
+          .eq('laboratorio_id', form.laboratorio_id)
+          .eq('turno', form.turno)
+
+        if (conflitos && conflitos.length > 0) {
+          alert(`Conflito detectado! O laboratório ${form.laboratorio_id} já está agendado para ${date.toLocaleDateString()} no turno ${form.turno}`)
+          return
+        }
+      }
+
+      // Preparar dados para inserção
+      const agendamento: Omit<AgendamentoLaboratorio, 'id' | 'created_at'> = {
+        professor_id: form.professor_id,
+        disciplina_id: form.disciplina_id,
+        email_contato: form.email_contato,
+        telefone: form.telefone,
+        datas_selecionadas: selectedDates.map(d => d.toISOString().split('T')[0]),
+        turno: form.turno,
+        laboratorio_id: form.laboratorio_id,
+        pratica_realizada: form.pratica_realizada,
+        software_utilizado: form.software_utilizado,
+        necessita_internet: form.necessita_internet,
+        quantidade_alunos: parseInt(form.quantidade_alunos),
+        observacao: form.observacao,
+        uso_kit_multimidia: form.uso_kit_multimidia
+      }
+
+      const { error } = await supabase
+        .from('agendamentos_laboratorio')
+        .insert([agendamento])
+
+      if (error) throw error
+
+      alert('Agendamento realizado com sucesso!')
+      
+      // Resetar formulário
+      setSelectedDates([])
+      setForm({
+        professor_id: '',
+        disciplina_id: '',
+        email_contato: '',
+        telefone: '',
+        turno: '',
+        laboratorio_id: '',
+        pratica_realizada: '',
+        software_utilizado: '',
+        necessita_internet: false,
+        quantidade_alunos: '',
+        observacao: '',
+        uso_kit_multimidia: false
+      })
+    } catch (error) {
+      console.error('Erro ao criar agendamento:', error)
+      alert('Erro ao criar agendamento. Verifique os dados e tente novamente.')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+      <div className="max-w-5xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-indigo-600 to-purple-600 px-8 py-6">
+            <h1 className="text-3xl font-bold text-white">
+              Agendamento de Laboratório
+            </h1>
+            <p className="text-indigo-100 mt-2">
+              Preencha os dados para agendar o uso do laboratório
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="p-8 space-y-8">
+            {/* Seção: Seleção de Datas */}
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Selecione as Datas
+              </h2>
+              <div className="bg-white p-4 rounded-lg border border-gray-300 inline-block">
+                <DayPicker
+                  mode="multiple"
+                  selected={selectedDates}
+                  onSelect={(days) => setSelectedDates(days || [])}
+                  disabled={{ before: new Date() }}
+                  className="font-sans"
+                />
+              </div>
+              {selectedDates.length > 0 && (
+                <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-200">
+                  <p className="text-sm font-semibold text-indigo-900 mb-2">
+                    Datas selecionadas ({selectedDates.length}):
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDates.map((date, idx) => (
+                      <span key={idx} className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium">
+                        {date.toLocaleDateString('pt-BR')} ({DIAS_SEMANA_MAP[date.getDay()]})
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {/* Seção: Identificação */}
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Identificação
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Professor <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={form.professor_id}
+                    onChange={e => setForm({ ...form, professor_id: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    disabled={selectedDates.length === 0}
+                  >
+                    <option value="">
+                      {selectedDates.length === 0 ? 'Selecione as datas primeiro' : 'Selecione o professor'}
+                    </option>
+                    {professoresFiltrados.sort().map(prof => (
+                      <option key={prof} value={prof}>{prof}</option>
+                    ))}
+                  </select>
+                  {diasSemanaSelecionados.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Filtrando por: {diasSemanaSelecionados.join(', ')}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Disciplina <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={form.disciplina_id}
+                    onChange={e => setForm({ ...form, disciplina_id: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    disabled={!form.professor_id}
+                  >
+                    <option value="">
+                      {!form.professor_id ? 'Selecione o professor primeiro' : 'Selecione a disciplina'}
+                    </option>
+                    {disciplinasFiltradas.sort().map(disc => (
+                      <option key={disc} value={disc}>{disc}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    E-mail de Contato
+                  </label>
+                  <input
+                    type="email"
+                    value={form.email_contato}
+                    onChange={e => setForm({ ...form, email_contato: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Telefone
+                  </label>
+                  <input
+                    type="tel"
+                    value={form.telefone}
+                    onChange={e => setForm({ ...form, telefone: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Seção: Agendamento */}
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Detalhes do Agendamento
+              </h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Turno <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={form.turno}
+                    onChange={e => setForm({ ...form, turno: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                  >
+                    <option value="">Selecione o turno</option>
+                    {TURNOS.map(turno => (
+                      <option key={turno.id} value={turno.id}>{turno.nome}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Quantidade de Alunos <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={form.quantidade_alunos}
+                    onChange={e => setForm({ ...form, quantidade_alunos: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    placeholder="Ex: 30"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Laboratório <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {LABORATORIOS.map(lab => (
+                    <label
+                      key={lab.id}
+                      className={`relative flex flex-col items-center p-4 border-2 rounded-xl cursor-pointer transition-all hover:shadow-md ${
+                        form.laboratorio_id === lab.id
+                          ? 'border-indigo-600 bg-indigo-50 shadow-lg'
+                          : 'border-gray-300 bg-white hover:border-indigo-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="laboratorio"
+                        value={lab.id}
+                        checked={form.laboratorio_id === lab.id}
+                        onChange={e => setForm({ ...form, laboratorio_id: e.target.value })}
+                        className="sr-only"
+                      />
+                      <span className="text-lg font-bold text-gray-800">{lab.id}</span>
+                      <span className="text-xs text-gray-600 mt-1">
+                        {lab.capacidade} PCs
+                      </span>
+                      {form.laboratorio_id === lab.id && (
+                        <div className="absolute top-2 right-2">
+                          <svg className="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                      )}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Seção: Requisitos Técnicos */}
+            <section className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                Requisitos Técnicos
+              </h2>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Prática a ser Realizada
+                  </label>
+                  <textarea
+                    value={form.pratica_realizada}
+                    onChange={e => setForm({ ...form, pratica_realizada: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    rows={3}
+                    placeholder="Descreva a prática/atividade que será realizada..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Software a ser Utilizado
+                  </label>
+                  <input
+                    type="text"
+                    value={form.software_utilizado}
+                    onChange={e => setForm({ ...form, software_utilizado: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    placeholder="Ex: Visual Studio Code, Python, MySQL Workbench"
+                  />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-6">
+                  <label className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={form.necessita_internet}
+                      onChange={e => setForm({ ...form, necessita_internet: e.target.checked })}
+                      className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition">
+                      Necessita acesso à Internet
+                    </span>
+                  </label>
+
+                  <label className="flex items-center space-x-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={form.uso_kit_multimidia}
+                      onChange={e => setForm({ ...form, uso_kit_multimidia: e.target.checked })}
+                      className="w-5 h-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-600 transition">
+                      Uso de Kit Multimídia
+                    </span>
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Observações
+                  </label>
+                  <textarea
+                    value={form.observacao}
+                    onChange={e => setForm({ ...form, observacao: e.target.value })}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                    rows={3}
+                    placeholder="Informações adicionais..."
+                  />
+                </div>
+              </div>
+            </section>
+
+            {/* Botão de Envio */}
+            <div className="flex justify-end gap-4 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm('Deseja limpar todos os campos?')) {
+                    setSelectedDates([])
+                    setForm({
+                      professor_id: '',
+                      disciplina_id: '',
+                      email_contato: '',
+                      telefone: '',
+                      turno: '',
+                      laboratorio_id: '',
+                      pratica_realizada: '',
+                      software_utilizado: '',
+                      necessita_internet: false,
+                      quantidade_alunos: '',
+                      observacao: '',
+                      uso_kit_multimidia: false
+                    })
+                  }
+                }}
+                className="px-6 py-3 border-2 border-gray-300 rounded-lg font-semibold text-gray-700 hover:bg-gray-100 transition"
+              >
+                Limpar
+              </button>
+              <button
+                type="submit"
+                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-lg shadow-lg hover:shadow-xl hover:from-indigo-700 hover:to-purple-700 transition transform hover:-translate-y-0.5"
+              >
+                Confirmar Agendamento
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  )
+}

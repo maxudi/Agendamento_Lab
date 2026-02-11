@@ -1,0 +1,161 @@
+# Sistema de Agendamento de Laboratórios
+
+Sistema web para gerenciamento e agendamento de laboratórios de informática, desenvolvido com React, TypeScript, Vite e Supabase.
+
+## ✨ Funcionalidades
+
+- ✅ Formulário de agendamento com seleção de múltiplas datas
+- ✅ Dashboard para visualização de todos os agendamentos
+- ✅ Validação de conflitos (mesmo laboratório, turno e data)
+- ✅ Interface responsiva e moderna com Tailwind CSS
+- ✅ Integração com Supabase para armazenamento de dados
+
+## 🚀 Tecnologias
+
+- **React 19** - Framework JavaScript
+- **TypeScript** - Tipagem estática
+- **Vite** - Build tool e dev server
+- **Tailwind CSS** - Framework CSS
+- **Supabase** - Backend as a Service (Database + Auth)
+- **React Day Picker** - Seletor de datas
+
+## 📋 Pré-requisitos
+
+- Node.js (versão 18 ou superior)
+- npm ou yarn
+- Conta no Supabase
+
+## ⚙️ Configuração
+
+1. **Clone o repositório**
+   ```bash
+   git clone <url-do-repositorio>
+   cd agendamento-labs
+   ```
+
+2. **Instale as dependências**
+   ```bash
+   npm install
+   ```
+
+3. **Configure as variáveis de ambiente**
+   
+   Copie o arquivo `.env.example` para `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+   
+   Edite o arquivo `.env` e adicione suas credenciais do Supabase:
+   ```env
+   VITE_SUPABASE_URL=sua_url_do_supabase
+   VITE_SUPABASE_ANON_KEY=sua_chave_anonima
+   ```
+
+4. **Configure o banco de dados no Supabase**
+   
+   Execute o seguinte SQL no editor SQL do Supabase:
+   ```sql
+   create table agendamentos (
+     id bigint primary key generated always as identity,
+     disciplina text not null,
+     laboratorio text not null,
+     turno text not null,
+     quantidade_alunos text not null,
+     software text,
+     observacao text,
+     data date not null,
+     created_at timestamp with time zone default timezone('utc'::text, now())
+   );
+   ```
+
+## 🎯 Como Usar
+
+1. **Iniciar o servidor de desenvolvimento**
+   ```bash
+   npm run dev
+   ```
+   
+   O sistema estará disponível em `http://localhost:5173`
+
+2. **Compilar para produção**
+   ```bash
+   npm run build
+   ```
+
+3. **Visualizar build de produção**
+   ```bash
+   npm run preview
+   ```
+
+## 📱 Estrutura do Projeto
+
+```
+agendamento-labs/
+├── src/
+│   ├── components/
+│   │   ├── AgendamentoForm.tsx  # Formulário de agendamento
+│   │   └── Dashboard.tsx         # Dashboard de visualização
+│   ├── lib/
+│   │   └── supabase.ts          # Configuração do Supabase
+│   ├── App.tsx                   # Componente principal
+│   ├── main.tsx                  # Entry point
+│   └── index.css                 # Estilos globais
+├── .env                          # Variáveis de ambiente (não versionado)
+├── .env.example                  # Exemplo de variáveis de ambiente
+└── package.json
+```
+
+## 📝 Uso do Sistema
+
+### Novo Agendamento
+1. Clique na aba "Novo Agendamento"
+2. Preencha os campos: disciplina, laboratório, etc.
+3. Selecione uma ou múltiplas datas no calendário
+4. Escolha o turno (Matutino, Vespertino ou Noturno)
+5. Clique em "Agendar"
+
+### Dashboard
+1. Clique na aba "Dashboard"
+2. Visualize todos os agendamentos ordenados por data
+3. Veja informações como disciplina, laboratório, turno e número de alunos
+
+## ✅ Status do Sistema
+
+O sistema foi verificado e está **funcionando corretamente**:
+- ✅ Compilação sem erros
+- ✅ Servidor de desenvolvimento rodando
+- ✅ Todas as dependências instaladas
+- ✅ TypeScript configurado corretamente
+- ✅ Integração com Supabase configurada
+
+## 🔧 Scripts Disponíveis
+
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Compila o projeto para produção
+- `npm run preview` - Visualiza o build de produção
+- `npm run lint` - Executa o linter
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
+```
