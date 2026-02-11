@@ -1,36 +1,74 @@
-# Sistema de Agendamento de Laboratórios
+# 🎓 Sistema de Agendamento de Laboratórios
+## Universidade Anhanguera
 
-Sistema web para gerenciamento e agendamento de laboratórios de informática, desenvolvido com React, TypeScript, Vite e Supabase.
+<div align="center">
+  <img src="https://logodownload.org/wp-content/uploads/2018/07/universidade-anhanguera-logo-1.png" alt="Universidade Anhanguera" width="300">
+</div>
 
-## ✨ Funcionalidades
+Sistema web completo para gerenciamento e agendamento de laboratórios de informática, desenvolvido com React, TypeScript, Vite e Supabase.
 
-- ✅ Formulário de agendamento com seleção de múltiplas datas
-- ✅ Dashboard para visualização de todos os agendamentos
-- ✅ Validação de conflitos (mesmo laboratório, turno e data)
-- ✅ Interface responsiva e moderna com Tailwind CSS
-- ✅ Integração com Supabase para armazenamento de dados
+## ✨ Funcionalidades Principais
 
-## 🚀 Tecnologias
+### 📅 Novo Agendamento
+- ✅ Seleção de múltiplas datas com calendário visual
+- ✅ Filtros dinâmicos baseados no cronograma de aulas
+- ✅ Validação de conflitos automática
+- ✅ Interface moderna com cards coloridos
+- ✅ Suporte a 11 laboratórios (C30-C39, incluindo C34a e C34b)
 
-- **React 19** - Framework JavaScript
-- **TypeScript** - Tipagem estática
-- **Vite** - Build tool e dev server
-- **Tailwind CSS** - Framework CSS
-- **Supabase** - Backend as a Service (Database + Auth)
-- **React Day Picker** - Seletor de datas
+### 📊 Dashboard de Agendamentos
+- ✅ Cards coloridos com gradientes por laboratório
+- ✅ Seções com informações detalhadas
+- ✅ Filtros por turno (Matutino, Vespertino, Noturno)
+- ✅ Busca em tempo real
+- ✅ Estatísticas por turno
+
+### 📆 Gerenciamento de Cronograma
+- ✅ CRUD completo de cronograma de aulas
+- ✅ Modais com Headless UI
+- ✅ Filtros avançados
+- ✅ Notificações com React Hot Toast
+
+## 🏫 Laboratórios Configurados
+
+```
+
+### 2. Instale as dependências
+```bash
+npm install
+```
+
+### 3. Configure as variáveis de ambiente
+
+Copie o arquivo `.env.example` para `.env`:
+```bash
+cp .env.example .env
+```
+
+Edite o arquivo `.env` e adicione suas credenciais do Supabase:
+```env
+*React 19.2.0** - Framework JavaScript
+- **TypeScript 5.9.3** - Tipagem estática
+- **Vite 7.3.1** - Build tool e dev server ultrarrápido
+- **Tailwind CSS 4.1.18** - Framework CSS com nova sintaxe
+- **Supabase 2.95.3** - Backend as a Service (PostgreSQL)
+- **React Day Picker 9.13.2** - Seletor de múltiplas datas
+- **Lucide React 0.563.0** - Ícones modernos
+- **Headless UI 2.2.9** - Componentes acessíveis
+- **React Hot Toast 2.6.0** - Sistema de notificações
 
 ## 📋 Pré-requisitos
 
 - Node.js (versão 18 ou superior)
 - npm ou yarn
-- Conta no Supabase
+- Conta no [Supabase](https://supabase.com)
 
-## ⚙️ Configuração
+## ⚙️ Instalação Rápida
 
-1. **Clone o repositório**
-   ```bash
-   git clone <url-do-repositorio>
-   cd agendamento-labs
+### 1. Clone o repositório
+```bash
+git clone https://github.com/maxudi/Agendamento_Lab.git
+cd Agendamento_Lab
    ```
 
 2. **Instale as dependências**
