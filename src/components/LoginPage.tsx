@@ -90,19 +90,6 @@ export default function LoginPage() {
               Entrar
             </button>
           </form>
-
-          {/* Credenciais de Exemplo */}
-          <div className="mt-8 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <p className="text-xs font-bold text-gray-700 mb-2">💡 Credenciais de exemplo:</p>
-            <div className="space-y-1 text-xs text-gray-600">
-              <p><span className="font-semibold">Admin:</span> admin / admin123</p>
-              <p><span className="font-semibold">Professor:</span> joao.silva / silva123</p>
-              <p className="text-[10px] text-gray-500 mt-2">
-                Senha do professor: primeiro sobrenome + 123<br/>
-                (Ex: Prof. João Silva = silva123)
-              </p>
-            </div>
-          </div>
         </div>
       </div>
     </div>
