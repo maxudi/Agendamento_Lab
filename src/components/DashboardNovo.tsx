@@ -4,7 +4,6 @@ import { useAuth } from "../contexts/AuthContext"
 import { Dialog, Transition } from '@headlessui/react'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
-import { toPng } from 'html-to-image'
 
 export default function DashboardNovo() {
   const { isAdmin, user } = useAuth()
@@ -66,33 +65,7 @@ export default function DashboardNovo() {
     console.log('🚀 [WEBHOOK] Justificativa:', justificativaTexto)
     
     try {
-      // Capturar o card como imagem
-      console.log('📷 [WEBHOOK] Procurando elemento do card: card-' + agendamento.id)
-      const cardElement = document.getElementById(`card-${agendamento.id}`)
-      
-      if (!cardElement) {
-        console.error('❌ [WEBHOOK] Card não encontrado para captura! ID:', `card-${agendamento.id}`)
-        console.log('📋 [WEBHOOK] Cards disponíveis no DOM:')
-        const allCards = document.querySelectorAll('[id^="card-"]')
-        allCards.forEach(card => console.log('  -', card.id))
-        return
-      }
-
-      console.log('✅ [WEBHOOK] Card encontrado, iniciando captura...')
-      
-      // Usar html-to-image que suporta cores modernas (oklch/oklab)
-      console.log('📸 [WEBHOOK] Capturando imagem com html-to-image (suporta oklch/oklab)...')
-      const imageBase64 = await toPng(cardElement, {
-        backgroundColor: '#ffffff',
-        pixelRatio: 2, // Mesma qualidade que scale: 2 do html2canvas
-        cacheBust: true,
-        skipFonts: false
-      })
-      
-      console.log('✅ [WEBHOOK] Imagem capturada com sucesso!')
-      console.log('✅ [WEBHOOK] Base64 gerado (tamanho:', imageBase64.length, 'caracteres)')
-
-      // Preparar dados para envio
+      // Preparar dados para envio (apenas textos, sem imagem)
       const webhookData = {
         status: action === 'aprovar' ? 'aprovado' : 'negado',
         motivo: action === 'negar' ? justificativaTexto : 'Agendamento aprovado',
@@ -102,16 +75,18 @@ export default function DashboardNovo() {
         disciplina: agendamento.disciplina_id,
         laboratorio: agendamento.laboratorio_id,
         turno: agendamento.turno,
+        quantidade_alunos: agendamento.quantidade_alunos,
         datas: agendamento.datas_selecionadas?.join(', '),
+        pratica_realizada: agendamento.pratica_realizada,
+        software_utilizado: agendamento.software_utilizado,
+        necessita_internet: agendamento.necessita_internet ? 'Sim' : 'Não',
+        uso_kit_multimidia: agendamento.uso_kit_multimidia ? 'Sim' : 'Não',
+        observacao: agendamento.observacao,
         validado_por: user?.fullName || user?.username || 'Admin',
-        validado_em: new Date().toISOString(),
-        card_imagem: imageBase64
+        validado_em: new Date().toISOString()
       }
 
-      console.log('📤 [WEBHOOK] Dados preparados:', {
-        ...webhookData,
-        card_imagem: `[${imageBase64.length} caracteres]` // Não logar a imagem completa
-      })
+      console.log('📤 [WEBHOOK] Dados preparados:', webhookData)
 
       // Enviar para o webhook
       console.log('🌐 [WEBHOOK] Enviando para:', 'https://geral-n8n.yzqq8i.easypanel.host/webhook/anhanguera')
@@ -491,7 +466,6 @@ export default function DashboardNovo() {
             {agendamentosFiltrados.map((agendamento) => (
               <div 
                 key={agendamento.id} 
-                id={`card-${agendamento.id}`}
                 className={`bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all ${getStatusBorderColor(agendamento.status || 'pendente')}`}
               >
                 {/* Header colorido do laboratório */}
