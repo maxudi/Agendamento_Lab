@@ -60,20 +60,31 @@ export default function DashboardNovo() {
         setShowValidationModal(true);
     }
     async function sendToWebhook(agendamento, action, justificativaTexto) {
+        console.log('🚀 [WEBHOOK] Iniciando envio para webhook...');
+        console.log('🚀 [WEBHOOK] Agendamento ID:', agendamento.id);
+        console.log('🚀 [WEBHOOK] Ação:', action);
+        console.log('🚀 [WEBHOOK] Justificativa:', justificativaTexto);
         try {
             // Capturar o card como imagem
+            console.log('📷 [WEBHOOK] Procurando elemento do card: card-' + agendamento.id);
             const cardElement = document.getElementById(`card-${agendamento.id}`);
             if (!cardElement) {
-                console.error('Card não encontrado para captura');
+                console.error('❌ [WEBHOOK] Card não encontrado para captura! ID:', `card-${agendamento.id}`);
+                console.log('📋 [WEBHOOK] Cards disponíveis no DOM:');
+                const allCards = document.querySelectorAll('[id^="card-"]');
+                allCards.forEach(card => console.log('  -', card.id));
                 return;
             }
+            console.log('✅ [WEBHOOK] Card encontrado, iniciando captura...');
             const canvas = await html2canvas(cardElement, {
                 backgroundColor: '#ffffff',
                 scale: 2,
                 logging: false,
                 useCORS: true
             });
+            console.log('✅ [WEBHOOK] Canvas criado:', canvas.width, 'x', canvas.height);
             const imageBase64 = canvas.toDataURL('image/png');
+            console.log('✅ [WEBHOOK] Imagem convertida para base64 (tamanho:', imageBase64.length, 'caracteres)');
             // Preparar dados para envio
             const webhookData = {
                 status: action === 'aprovar' ? 'aprovado' : 'negado',
@@ -89,24 +100,43 @@ export default function DashboardNovo() {
                 validado_em: new Date().toISOString(),
                 card_imagem: imageBase64
             };
+            console.log('📤 [WEBHOOK] Dados preparados:', {
+                ...webhookData,
+                card_imagem: `[${imageBase64.length} caracteres]` // Não logar a imagem completa
+            });
             // Enviar para o webhook
-            await fetch('https://geral-n8n.yzqq8i.easypanel.host/webhook/anhanguera', {
+            console.log('🌐 [WEBHOOK] Enviando para:', 'https://geral-n8n.yzqq8i.easypanel.host/webhook/anhanguera');
+            const response = await fetch('https://geral-n8n.yzqq8i.easypanel.host/webhook/anhanguera', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(webhookData)
             });
-            console.log('✅ Enviado para webhook com sucesso');
+            console.log('📡 [WEBHOOK] Resposta HTTP:', response.status, response.statusText);
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ [WEBHOOK] Erro na resposta:', errorText);
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            const responseData = await response.text();
+            console.log('✅ [WEBHOOK] Resposta do servidor:', responseData);
+            console.log('✅ [WEBHOOK] Enviado para webhook com sucesso!');
+            toast.success('📤 Notificação enviada!');
         }
         catch (error) {
-            console.error('❌ Erro ao enviar para webhook:', error);
+            console.error('❌ [WEBHOOK] Erro ao enviar para webhook:', error);
+            console.error('❌ [WEBHOOK] Stack trace:', error instanceof Error ? error.stack : 'N/A');
+            toast.error('⚠️ Erro ao enviar notificação (agendamento salvo)');
             // Não bloqueia o processo principal
         }
     }
     async function handleValidation() {
         if (!selectedAgendamento || !selectedAgendamento.id)
             return;
+        console.log('🔄 [VALIDAÇÃO] Iniciando validação...');
+        console.log('🔄 [VALIDAÇÃO] Agendamento:', selectedAgendamento.id);
+        console.log('🔄 [VALIDAÇÃO] Ação:', validationAction);
         // Validação: justificativa obrigatória ao negar
         if (validationAction === 'negar' && !justificativa.trim()) {
             toast.error('⚠️ Justificativa obrigatória ao negar um agendamento!');
@@ -121,28 +151,37 @@ export default function DashboardNovo() {
             if (validationAction === 'negar') {
                 updateData.justificativa_negacao = justificativa;
             }
+            console.log('💾 [VALIDAÇÃO] Atualizando banco de dados...');
             const { error } = await supabase
                 .from('agendamentos_laboratorio')
                 .update(updateData)
                 .eq('id', selectedAgendamento.id);
             if (error)
                 throw error;
+            console.log('✅ [VALIDAÇÃO] Banco atualizado com sucesso');
             const message = validationAction === 'aprovar'
                 ? '✅ Agendamento aprovado com sucesso!'
                 : '❌ Agendamento negado com sucesso!';
             toast.success(message);
             setShowValidationModal(false);
+            // Criar agendamento atualizado com novos dados
+            const agendamentoAtualizado = {
+                ...selectedAgendamento,
+                ...updateData
+            };
+            console.log('🔄 [VALIDAÇÃO] Agendamento atualizado:', agendamentoAtualizado);
             // Atualizar lista para refletir mudanças antes de capturar
+            console.log('🔄 [VALIDAÇÃO] Recarregando lista de agendamentos...');
             await fetchAgendamentos();
+            console.log('⏳ [VALIDAÇÃO] Aguardando 1 segundo para atualizar DOM...');
             // Aguardar um pouco para garantir que o DOM foi atualizado
             setTimeout(() => {
-                // Encontrar o agendamento atualizado
-                const agendamentoAtualizado = agendamentos.find(a => a.id === selectedAgendamento.id) || selectedAgendamento;
+                console.log('🚀 [VALIDAÇÃO] Chamando sendToWebhook...');
                 sendToWebhook(agendamentoAtualizado, validationAction, justificativa);
-            }, 500);
+            }, 1000);
         }
         catch (error) {
-            console.error('Erro ao validar:', error);
+            console.error('❌ [VALIDAÇÃO] Erro ao validar:', error);
             toast.error('❌ Erro ao processar validação');
         }
     }
