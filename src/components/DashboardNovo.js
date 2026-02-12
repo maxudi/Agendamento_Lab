@@ -59,36 +59,32 @@ export default function DashboardNovo() {
         setJustificativa('');
         setShowValidationModal(true);
     }
-    function convertOklchToRgb(element) {
+    function inlineAllStyles(element) {
         try {
-            // Obter todos os estilos computados
+            // Obter todos os estilos computados (navegador já converte oklch/oklab para rgb)
             const computedStyle = window.getComputedStyle(element);
-            // Propriedades que podem conter cores
-            const colorProps = [
-                'color',
-                'backgroundColor',
-                'borderColor',
-                'borderTopColor',
-                'borderRightColor',
-                'borderBottomColor',
-                'borderLeftColor',
-                'outlineColor'
-            ];
-            colorProps.forEach(prop => {
-                const value = computedStyle.getPropertyValue(prop);
-                if (value) {
-                    // Se for oklch, o navegador já converteu para rgb no computedStyle
-                    // Apenas aplicar diretamente
-                    element.style[prop] = value;
+            // Copiar TODOS os estilos computados como inline
+            // Isso força o html2canvas a usar valores rgb ao invés de oklch/oklab
+            Array.from(computedStyle).forEach(prop => {
+                try {
+                    const value = computedStyle.getPropertyValue(prop);
+                    if (value && value !== 'none' && value !== 'auto') {
+                        element.style.setProperty(prop, value, 'important');
+                    }
+                }
+                catch (e) {
+                    // Ignorar propriedades problemáticas
                 }
             });
+            // Remover classes CSS para evitar conflitos
+            element.className = '';
             // Processar todos os filhos recursivamente
             Array.from(element.children).forEach(child => {
-                convertOklchToRgb(child);
+                inlineAllStyles(child);
             });
         }
         catch (error) {
-            console.warn('⚠️ [WEBHOOK] Erro ao converter cores:', error);
+            console.warn('⚠️ [WEBHOOK] Erro ao converter estilos:', error);
         }
     }
     async function sendToWebhook(agendamento, action, justificativaTexto) {
@@ -109,15 +105,15 @@ export default function DashboardNovo() {
             }
             console.log('✅ [WEBHOOK] Card encontrado, iniciando captura...');
             // Clonar o card para converter cores oklch sem afetar o original
-            console.log('🔄 [WEBHOOK] Clonando card para conversão de cores...');
+            console.log('🔄 [WEBHOOK] Clonando card para conversão de estilos...');
             const clonedCard = cardElement.cloneNode(true);
             clonedCard.style.position = 'absolute';
             clonedCard.style.left = '-9999px';
             clonedCard.style.top = '0';
             document.body.appendChild(clonedCard);
-            // Converter todas as cores oklch para rgb
-            console.log('🎨 [WEBHOOK] Convertendo cores oklch para rgb...');
-            convertOklchToRgb(clonedCard);
+            // Converter todos os estilos para inline (navegador já converteu cores para rgb)
+            console.log('🎨 [WEBHOOK] Convertendo estilos para inline (oklch/oklab → rgb)...');
+            inlineAllStyles(clonedCard);
             console.log('📸 [WEBHOOK] Capturando imagem do card...');
             const canvas = await html2canvas(clonedCard, {
                 backgroundColor: '#ffffff',
