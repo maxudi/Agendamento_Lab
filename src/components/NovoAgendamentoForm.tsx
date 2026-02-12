@@ -1,7 +1,9 @@
-import { useState, useEffect, FormEvent } from "react"
+import { useState, useEffect, FormEvent, Fragment } from "react"
 import { supabase, CronogramaAula, AgendamentoLaboratorio, Laboratorio } from "../lib/supabase"
 import { DayPicker } from "react-day-picker"
 import "react-day-picker/dist/style.css"
+import { Dialog, Transition } from '@headlessui/react'
+import toast from 'react-hot-toast'
 
 const LABORATORIOS: Laboratorio[] = [
   { id: 'C30', nome: 'Laboratório C30', capacidade: 8 },
@@ -34,11 +36,23 @@ export default function NovoAgendamentoForm() {
   const [diasSemanaSelecionados, setDiasSemanaSelecionados] = useState<string[]>([])
   const [professoresFiltrados, setProfessoresFiltrados] = useState<string[]>([])
   const [disciplinasFiltradas, setDisciplinasFiltradas] = useState<string[]>([])
+  const [showClearModal, setShowClearModal] = useState(false)
   const [form, setForm] = useState({
     professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '',
     laboratorio_id: '', pratica_realizada: '', software_utilizado: '', necessita_internet: false,
     quantidade_alunos: '', observacao: '', uso_kit_multimidia: false
   })
+
+  function limparFormulario() {
+    setSelectedDates([])
+    setForm({
+      professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '',
+      laboratorio_id: '', pratica_realizada: '', software_utilizado: '', necessita_internet: false,
+      quantidade_alunos: '', observacao: '', uso_kit_multimidia: false
+    })
+    setShowClearModal(false)
+    toast.success('✨ Formulário limpo com sucesso!')
+  }
 
   useEffect(() => { fetchCronogramas() }, [])
 
@@ -49,7 +63,7 @@ export default function NovoAgendamentoForm() {
       setCronogramas(data || [])
     } catch (error) {
       console.error('Erro ao buscar cronogramas:', error)
-      alert('Erro ao carregar dados do cronograma')
+      toast.error('❌ Erro ao carregar dados do cronograma')
     } finally {
       setLoading(false)
     }
@@ -96,10 +110,22 @@ export default function NovoAgendamentoForm() {
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (selectedDates.length === 0) return alert('Por favor, selecione pelo menos uma data')
-    if (!form.professor_id || !form.disciplina_id) return alert('Por favor, selecione o professor e a disciplina')
-    if (!form.laboratorio_id) return alert('Por favor, selecione um laboratório')
-    if (!form.quantidade_alunos || parseInt(form.quantidade_alunos) <= 0) return alert('Por favor, informe a quantidade de alunos')
+    if (selectedDates.length === 0) {
+      toast.error('📅 Por favor, selecione pelo menos uma data')
+      return
+    }
+    if (!form.professor_id || !form.disciplina_id) {
+      toast.error('👨‍🏫 Por favor, selecione o professor e a disciplina')
+      return
+    }
+    if (!form.laboratorio_id) {
+      toast.error('🖥️ Por favor, selecione um laboratório')
+      return
+    }
+    if (!form.quantidade_alunos || parseInt(form.quantidade_alunos) <= 0) {
+      toast.error('👥 Por favor, informe a quantidade de alunos')
+      return
+    }
 
     try {
       for (const date of selectedDates) {
@@ -107,7 +133,8 @@ export default function NovoAgendamentoForm() {
         const { data: conflitos } = await supabase.from('agendamentos_laboratorio').select('*')
           .contains('datas_selecionadas', [dataISO]).eq('laboratorio_id', form.laboratorio_id).eq('turno', form.turno)
         if (conflitos && conflitos.length > 0) {
-          return alert(`Conflito detectado! O laboratório ${form.laboratorio_id} já está agendado para ${date.toLocaleDateString()} no turno ${form.turno}`)
+          toast.error(`⚠️ Conflito detectado! O laboratório ${form.laboratorio_id} já está agendado para ${date.toLocaleDateString()} no turno ${form.turno}`, { duration: 5000 })
+          return
         }
       }
 
@@ -119,13 +146,13 @@ export default function NovoAgendamentoForm() {
       const { error } = await supabase.from('agendamentos_laboratorio').insert([agendamento])
       if (error) throw error
 
-      alert('✅ Agendamento realizado com sucesso!')
+      toast.success('✅ Agendamento realizado com sucesso!', { duration: 4000 })
       setSelectedDates([])
       setForm({ professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '', laboratorio_id: '',
         pratica_realizada: '', software_utilizado: '', necessita_internet: false, quantidade_alunos: '', observacao: '', uso_kit_multimidia: false })
     } catch (error) {
       console.error('Erro:', error)
-      alert('❌ Erro ao criar agendamento')
+      toast.error('❌ Erro ao criar agendamento')
     }
   }
 
@@ -371,7 +398,7 @@ export default function NovoAgendamentoForm() {
 
             {/* Botões */}
             <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
-              <button type="button" onClick={() => { if (confirm('Deseja limpar todos os campos?')) { setSelectedDates([]); setForm({ professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '', laboratorio_id: '', pratica_realizada: '', software_utilizado: '', necessita_internet: false, quantidade_alunos: '', observacao: '', uso_kit_multimidia: false }) } }}
+              <button type="button" onClick={() => setShowClearModal(true)}
                 className="px-6 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 hover:border-gray-400 hover:shadow-md transition-all flex items-center justify-center space-x-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                 <span>Limpar</span>
@@ -384,6 +411,75 @@ export default function NovoAgendamentoForm() {
           </form>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Limpeza */}
+      <Transition appear show={showClearModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowClearModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                  <div className="bg-gradient-to-br from-orange-500 to-red-500 p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </div>
+                      <Dialog.Title className="text-2xl font-black text-white">
+                        Limpar Formulário?
+                      </Dialog.Title>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <p className="text-gray-600 text-lg mb-6">
+                      Todos os campos serão limpos e as datas selecionadas serão removidas. Esta ação não pode ser desfeita.
+                    </p>
+
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                        onClick={() => setShowClearModal(false)}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold rounded-xl hover:shadow-xl hover:scale-105 transition-all"
+                        onClick={limparFormulario}
+                      >
+                        Sim, Limpar
+                      </button>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
 
       <style>{`
         @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

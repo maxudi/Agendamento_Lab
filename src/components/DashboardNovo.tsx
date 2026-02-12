@@ -18,6 +18,10 @@ export default function DashboardNovo() {
   const [selectedAgendamento, setSelectedAgendamento] = useState<AgendamentoLaboratorio | null>(null)
   const [validationAction, setValidationAction] = useState<'aprovar' | 'negar'>('aprovar')
   const [justificativa, setJustificativa] = useState('')
+  
+  // Estados do modal de exclusão
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [agendamentoToDelete, setAgendamentoToDelete] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAgendamentos()
@@ -38,17 +42,30 @@ export default function DashboardNovo() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm('🗑️ Deseja realmente excluir este agendamento?')) return
+  function openDeleteModal(id: string) {
+    setAgendamentoToDelete(id)
+    setShowDeleteModal(true)
+  }
+
+  async function confirmDelete() {
+    if (!agendamentoToDelete) return
+    
     try {
-      const { error } = await supabase.from('agendamentos_laboratorio').delete().eq('id', id)
+      const { error } = await supabase.from('agendamentos_laboratorio').delete().eq('id', agendamentoToDelete)
       if (error) throw error
       toast.success('✅ Agendamento excluído com sucesso!')
+      setShowDeleteModal(false)
+      setAgendamentoToDelete(null)
       fetchAgendamentos()
     } catch (error) {
       console.error('Erro ao excluir:', error)
       toast.error('❌ Erro ao excluir agendamento')
     }
+  }
+
+  async function handleDelete(id: string) {
+    // Função mantida por compatibilidade, mas não usada mais
+    openDeleteModal(id)
   }
 
   function openValidationModal(agendamento: AgendamentoLaboratorio, action: 'aprovar' | 'negar') {
@@ -626,7 +643,7 @@ export default function DashboardNovo() {
                     
                     {/* Botão Excluir */}
                     <button
-                      onClick={() => agendamento.id && handleDelete(agendamento.id)}
+                      onClick={() => agendamento.id && openDeleteModal(agendamento.id)}
                       className="w-full px-6 py-3 bg-gradient-to-r from-gray-600 to-gray-700 text-white rounded-xl hover:shadow-lg transition-all font-bold flex items-center justify-center space-x-2"
                     >
                       <span>🗑️</span>
@@ -718,6 +735,80 @@ export default function DashboardNovo() {
                       >
                         Confirmar
                       </button>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
+            </div>
+          </Dialog>
+        </Transition>
+
+        {/* Modal de Exclusão */}
+        <Transition appear show={showDeleteModal} as={Fragment}>
+          <Dialog as="div" className="relative z-50" onClose={() => setShowDeleteModal(false)}>
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0"
+              enterTo="opacity-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100"
+              leaveTo="opacity-0"
+            >
+              <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+            </Transition.Child>
+
+            <div className="fixed inset-0 overflow-y-auto">
+              <div className="flex min-h-full items-center justify-center p-4">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
+                  leave="ease-in duration-200"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
+                >
+                  <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                    <div className="bg-gradient-to-br from-red-500 to-red-700 p-6">
+                      <div className="flex items-center space-x-3">
+                        <div className="flex-shrink-0">
+                          <svg className="h-10 w-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </div>
+                        <Dialog.Title className="text-2xl font-black text-white">
+                          Excluir Agendamento?
+                        </Dialog.Title>
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl">
+                        <p className="text-red-800 font-semibold mb-2">
+                          ⚠️ Atenção!
+                        </p>
+                        <p className="text-red-700 text-sm">
+                          Esta ação não pode ser desfeita. O agendamento será removido permanentemente do sistema.
+                        </p>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                          onClick={() => setShowDeleteModal(false)}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          className="flex-1 px-6 py-3 bg-gradient-to-r from-red-500 to-red-700 text-white font-bold rounded-xl hover:shadow-xl hover:scale-105 transition-all"
+                          onClick={confirmDelete}
+                        >
+                          Sim, Excluir
+                        </button>
+                      </div>
                     </div>
                   </Dialog.Panel>
                 </Transition.Child>
