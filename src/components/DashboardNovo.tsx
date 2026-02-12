@@ -1,9 +1,10 @@
-import { useEffect, useState, Fragment } from "react"
+import { useEffect, useState, Fragment, useRef } from "react"
 import { supabase, AgendamentoLaboratorio } from "../lib/supabase"
 import { useAuth } from "../contexts/AuthContext"
 import { Dialog, Transition } from '@headlessui/react'
 import * as XLSX from 'xlsx'
 import toast from 'react-hot-toast'
+import html2canvas from 'html2canvas'
 
 export default function DashboardNovo() {
   const { isAdmin, user } = useAuth()
@@ -58,6 +59,56 @@ export default function DashboardNovo() {
     setShowValidationModal(true)
   }
 
+  async function sendToWebhook(agendamento: AgendamentoLaboratorio, action: 'aprovar' | 'negar', justificativaTexto?: string) {
+    try {
+      // Capturar o card como imagem
+      const cardElement = document.getElementById(`card-${agendamento.id}`)
+      if (!cardElement) {
+        console.error('Card não encontrado para captura')
+        return
+      }
+
+      const canvas = await html2canvas(cardElement, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        useCORS: true
+      })
+
+      const imageBase64 = canvas.toDataURL('image/png')
+
+      // Preparar dados para envio
+      const webhookData = {
+        status: action === 'aprovar' ? 'aprovado' : 'negado',
+        motivo: action === 'negar' ? justificativaTexto : 'Agendamento aprovado',
+        professor: agendamento.professor_id,
+        telefone: agendamento.telefone,
+        email: agendamento.email_contato,
+        disciplina: agendamento.disciplina_id,
+        laboratorio: agendamento.laboratorio_id,
+        turno: agendamento.turno,
+        datas: agendamento.datas_selecionadas?.join(', '),
+        validado_por: user?.fullName || user?.username || 'Admin',
+        validado_em: new Date().toISOString(),
+        card_imagem: imageBase64
+      }
+
+      // Enviar para o webhook
+      await fetch('https://geral-n8n.yzqq8i.easypanel.host/webhook/anhanguera', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(webhookData)
+      })
+
+      console.log('✅ Enviado para webhook com sucesso')
+    } catch (error) {
+      console.error('❌ Erro ao enviar para webhook:', error)
+      // Não bloqueia o processo principal
+    }
+  }
+
   async function handleValidation() {
     if (!selectedAgendamento || !selectedAgendamento.id) return
 
@@ -91,7 +142,17 @@ export default function DashboardNovo() {
       
       toast.success(message)
       setShowValidationModal(false)
-      fetchAgendamentos()
+      
+      // Atualizar lista para refletir mudanças antes de capturar
+      await fetchAgendamentos()
+      
+      // Aguardar um pouco para garantir que o DOM foi atualizado
+      setTimeout(() => {
+        // Encontrar o agendamento atualizado
+        const agendamentoAtualizado = agendamentos.find(a => a.id === selectedAgendamento.id) || selectedAgendamento
+        sendToWebhook(agendamentoAtualizado, validationAction, justificativa)
+      }, 500)
+      
     } catch (error) {
       console.error('Erro ao validar:', error)
       toast.error('❌ Erro ao processar validação')
@@ -376,7 +437,11 @@ export default function DashboardNovo() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {agendamentosFiltrados.map((agendamento) => (
-              <div key={agendamento.id} className={`bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all ${getStatusBorderColor(agendamento.status || 'pendente')}`}>
+              <div 
+                key={agendamento.id} 
+                id={`card-${agendamento.id}`}
+                className={`bg-white rounded-2xl shadow-xl overflow-hidden hover:shadow-2xl transition-all ${getStatusBorderColor(agendamento.status || 'pendente')}`}
+              >
                 {/* Header colorido do laboratório */}
                 <div className={`bg-gradient-to-r ${getLabColor(agendamento.laboratorio_id)} p-6 text-white`}>
                   <div className="flex items-center justify-between mb-2">
