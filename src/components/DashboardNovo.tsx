@@ -549,6 +549,24 @@ export default function DashboardNovo() {
                     </div>
                   </div>
 
+                  {/* Data de Criação do Pedido */}
+                  {agendamento.created_at && (
+                    <div className="border-t border-gray-700 pt-4">
+                      <div className="flex items-center">
+                        <span className="text-gray-400 text-sm font-semibold">📋 Pedido feito em:</span>
+                        <span className="text-white text-sm font-bold ml-2">
+                          {new Date(agendamento.created_at).toLocaleDateString('pt-BR', { 
+                            day: '2-digit', 
+                            month: 'long', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Detalhes adicionais */}
                   {(agendamento.software_utilizado || agendamento.pratica_realizada) && (
                     <div className="border-t border-gray-700 pt-4 space-y-2">

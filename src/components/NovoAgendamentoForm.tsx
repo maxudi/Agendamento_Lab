@@ -37,6 +37,7 @@ export default function NovoAgendamentoForm() {
   const [professoresFiltrados, setProfessoresFiltrados] = useState<string[]>([])
   const [disciplinasFiltradas, setDisciplinasFiltradas] = useState<string[]>([])
   const [showClearModal, setShowClearModal] = useState(false)
+  const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [form, setForm] = useState({
     professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '',
     laboratorio_id: '', pratica_realizada: '', software_utilizado: '', necessita_internet: false,
@@ -108,8 +109,8 @@ export default function NovoAgendamentoForm() {
     }
   }, [form.professor_id, diasSemanaSelecionados, cronogramas])
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault()
+  async function handleSubmit(e?: FormEvent) {
+    if (e) e.preventDefault()
     if (selectedDates.length === 0) {
       toast.error('📅 Por favor, selecione pelo menos uma data')
       return
@@ -146,6 +147,7 @@ export default function NovoAgendamentoForm() {
       const { error } = await supabase.from('agendamentos_laboratorio').insert([agendamento])
       if (error) throw error
 
+      setShowConfirmModal(false)
       toast.success('✅ Agendamento realizado com sucesso!', { duration: 4000 })
       setSelectedDates([])
       setForm({ professor_id: '', disciplina_id: '', email_contato: '', telefone: '', turno: '', laboratorio_id: '',
@@ -194,7 +196,7 @@ export default function NovoAgendamentoForm() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="p-6 sm:p-8 space-y-8">
+          <form onSubmit={(e) => { e.preventDefault(); setShowConfirmModal(true); }} className="p-6 sm:p-8 space-y-8">
             
             {/* Seção: Datas */}
             <section className="group relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-6 border-2 border-blue-200/50 hover:border-indigo-400 transition-all duration-300 hover:shadow-xl">
@@ -411,6 +413,97 @@ export default function NovoAgendamentoForm() {
           </form>
         </div>
       </div>
+
+      {/* Modal de Confirmação de Agendamento */}
+      <Transition appear show={showConfirmModal} as={Fragment}>
+        <Dialog as="div" className="relative z-50" onClose={() => setShowConfirmModal(false)}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all">
+                  <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <Dialog.Title className="text-2xl font-black text-white">
+                        Confirmar Agendamento?
+                      </Dialog.Title>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <div className="mb-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                      <p className="text-blue-800 font-semibold mb-3">
+                        📋 Você está prestes a realizar um agendamento de laboratório.
+                      </p>
+                      <div className="space-y-2 text-sm text-blue-700">
+                        <p><strong>Professor:</strong> {form.professor_id}</p>
+                        <p><strong>Disciplina:</strong> {form.disciplina_id}</p>
+                        <p><strong>Laboratório:</strong> {form.laboratorio_id}</p>
+                        <p><strong>Turno:</strong> {form.turno}</p>
+                        <p><strong>Quantidade de alunos:</strong> {form.quantidade_alunos}</p>
+                        <p><strong>Data(s):</strong> {selectedDates.map(d => d.toLocaleDateString('pt-BR')).join(', ')}</p>
+                      </div>
+                    </div>
+
+                    <div className="mb-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
+                      <p className="text-yellow-800 font-bold mb-2 flex items-center">
+                        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Importante!
+                      </p>
+                      <p className="text-yellow-800 text-sm">
+                        ⏱️ A equipe responsável tem até <strong>15 dias</strong> para deferir ou indeferir o seu pedido de agendamento. Você será notificado sobre a decisão.
+                      </p>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        className="flex-1 px-6 py-3 border-2 border-gray-300 rounded-xl font-bold text-gray-700 hover:bg-gray-50 transition-all"
+                        onClick={() => setShowConfirmModal(false)}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        className="flex-1 px-6 py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 text-white font-bold rounded-xl hover:shadow-xl hover:scale-105 transition-all"
+                        onClick={() => handleSubmit()}
+                      >
+                        Confirmar
+                      </button>
+                    </div>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
 
       {/* Modal de Confirmação de Limpeza */}
       <Transition appear show={showClearModal} as={Fragment}>
