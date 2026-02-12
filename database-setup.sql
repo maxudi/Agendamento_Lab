@@ -174,3 +174,24 @@ insert into cronograma_aulas (disciplina, professor, dia_semana, curso, turno, h
 -- C34a: 19 alunos | C34b: 21 alunos (C34 foi dividido em A e B)
 -- C35: 30 alunos | C36: 42 alunos | C37: 71 alunos | C38: 37 alunos | C39: 6 alunos
 */
+
+-- ========================================
+-- MIGRAÇÃO: Adicionar Sistema de Validação de Agendamentos
+-- Data: 12/02/2026
+-- ========================================
+
+-- Adicionar campos de status e justificativa à tabela agendamentos_laboratorio
+alter table agendamentos_laboratorio 
+add column if not exists status text default 'pendente' check (status in ('pendente', 'aprovado', 'negado')),
+add column if not exists justificativa_negacao text,
+add column if not exists validado_por text,
+add column if not exists validado_em timestamp with time zone;
+
+-- Criar índice para filtrar por status
+create index if not exists idx_agendamentos_status on agendamentos_laboratorio(status);
+
+-- Comentários nas colunas
+comment on column agendamentos_laboratorio.status is 'Status do agendamento: pendente (aguardando validação), aprovado (validado pelo admin), negado (recusado pelo admin)';
+comment on column agendamentos_laboratorio.justificativa_negacao is 'Justificativa obrigatória quando o agendamento é negado';
+comment on column agendamentos_laboratorio.validado_por is 'Nome do administrador que validou/negou o agendamento';
+comment on column agendamentos_laboratorio.validado_em is 'Data e hora da validação/negação do agendamento';

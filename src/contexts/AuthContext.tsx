@@ -101,7 +101,7 @@ const USERS = [
   { username: 'mayara.lima', password: 'magalhaes123', role: 'professor' as const, fullName: 'Mayara Magalhaes Lima' },
   { username: 'daniel.souza', password: 'alberto123', role: 'professor' as const, fullName: 'Daniel Alberto Assis Souza' },
   { username: 'savia.rodrigues', password: 'sousa123', role: 'professor' as const, fullName: 'Savia Sousa Rodrigues' },
-  { username: 'mauro.suarez', password: 'paipa123', role: 'professor' as const, fullName: 'Mauro Paipa Suarez' },
+  { username: 'mauro.suarez', password: 'paipa123', role: 'admin' as const, fullName: 'Mauro Paipa Suarez' },
   { username: 'wendel.freitas', password: 'lima123', role: 'professor' as const, fullName: 'Wendel Lima de Freitas' },
   { username: 'juliana.macedo', password: 'flavia123', role: 'professor' as const, fullName: 'Juliana Flavia Palazzo da Costa Macedo' }
 ];

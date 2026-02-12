@@ -50,6 +50,10 @@ export interface AgendamentoLaboratorio {
   quantidade_alunos: number
   observacao: string
   uso_kit_multimidia: boolean
+  status?: 'pendente' | 'aprovado' | 'negado'
+  justificativa_negacao?: string
+  validado_por?: string
+  validado_em?: string
   created_at?: string
 }
 
