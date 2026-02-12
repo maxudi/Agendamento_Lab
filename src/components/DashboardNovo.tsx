@@ -59,6 +59,41 @@ export default function DashboardNovo() {
     setShowValidationModal(true)
   }
 
+  function convertOklchToRgb(element: HTMLElement) {
+    try {
+      // Obter todos os estilos computados
+      const computedStyle = window.getComputedStyle(element)
+      
+      // Propriedades que podem conter cores
+      const colorProps = [
+        'color',
+        'backgroundColor',
+        'borderColor',
+        'borderTopColor',
+        'borderRightColor',
+        'borderBottomColor',
+        'borderLeftColor',
+        'outlineColor'
+      ]
+
+      colorProps.forEach(prop => {
+        const value = computedStyle.getPropertyValue(prop)
+        if (value) {
+          // Se for oklch, o navegador já converteu para rgb no computedStyle
+          // Apenas aplicar diretamente
+          (element.style as any)[prop] = value
+        }
+      })
+
+      // Processar todos os filhos recursivamente
+      Array.from(element.children).forEach(child => {
+        convertOklchToRgb(child as HTMLElement)
+      })
+    } catch (error) {
+      console.warn('⚠️ [WEBHOOK] Erro ao converter cores:', error)
+    }
+  }
+
   async function sendToWebhook(agendamento: AgendamentoLaboratorio, action: 'aprovar' | 'negar', justificativaTexto?: string) {
     console.log('🚀 [WEBHOOK] Iniciando envio para webhook...')
     console.log('🚀 [WEBHOOK] Agendamento ID:', agendamento.id)
@@ -79,12 +114,30 @@ export default function DashboardNovo() {
       }
 
       console.log('✅ [WEBHOOK] Card encontrado, iniciando captura...')
-      const canvas = await html2canvas(cardElement, {
+      
+      // Clonar o card para converter cores oklch sem afetar o original
+      console.log('🔄 [WEBHOOK] Clonando card para conversão de cores...')
+      const clonedCard = cardElement.cloneNode(true) as HTMLElement
+      clonedCard.style.position = 'absolute'
+      clonedCard.style.left = '-9999px'
+      clonedCard.style.top = '0'
+      document.body.appendChild(clonedCard)
+      
+      // Converter todas as cores oklch para rgb
+      console.log('🎨 [WEBHOOK] Convertendo cores oklch para rgb...')
+      convertOklchToRgb(clonedCard)
+      
+      console.log('📸 [WEBHOOK] Capturando imagem do card...')
+      const canvas = await html2canvas(clonedCard, {
         backgroundColor: '#ffffff',
         scale: 2,
         logging: false,
         useCORS: true
       })
+      
+      // Remover o clone do DOM
+      document.body.removeChild(clonedCard)
+      console.log('🧹 [WEBHOOK] Card clonado removido')
 
       console.log('✅ [WEBHOOK] Canvas criado:', canvas.width, 'x', canvas.height)
       const imageBase64 = canvas.toDataURL('image/png')
