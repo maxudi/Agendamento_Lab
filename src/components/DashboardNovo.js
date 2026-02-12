@@ -5,7 +5,7 @@ import { useAuth } from "../contexts/AuthContext";
 import { Dialog, Transition } from '@headlessui/react';
 import * as XLSX from 'xlsx';
 import toast from 'react-hot-toast';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 export default function DashboardNovo() {
     const { isAdmin, user } = useAuth();
     const [agendamentos, setAgendamentos] = useState([]);
@@ -59,34 +59,6 @@ export default function DashboardNovo() {
         setJustificativa('');
         setShowValidationModal(true);
     }
-    function inlineAllStyles(element) {
-        try {
-            // Obter todos os estilos computados (navegador já converte oklch/oklab para rgb)
-            const computedStyle = window.getComputedStyle(element);
-            // Copiar TODOS os estilos computados como inline
-            // Isso força o html2canvas a usar valores rgb ao invés de oklch/oklab
-            Array.from(computedStyle).forEach(prop => {
-                try {
-                    const value = computedStyle.getPropertyValue(prop);
-                    if (value && value !== 'none' && value !== 'auto') {
-                        element.style.setProperty(prop, value, 'important');
-                    }
-                }
-                catch (e) {
-                    // Ignorar propriedades problemáticas
-                }
-            });
-            // Remover classes CSS para evitar conflitos
-            element.className = '';
-            // Processar todos os filhos recursivamente
-            Array.from(element.children).forEach(child => {
-                inlineAllStyles(child);
-            });
-        }
-        catch (error) {
-            console.warn('⚠️ [WEBHOOK] Erro ao converter estilos:', error);
-        }
-    }
     async function sendToWebhook(agendamento, action, justificativaTexto) {
         console.log('🚀 [WEBHOOK] Iniciando envio para webhook...');
         console.log('🚀 [WEBHOOK] Agendamento ID:', agendamento.id);
@@ -104,29 +76,16 @@ export default function DashboardNovo() {
                 return;
             }
             console.log('✅ [WEBHOOK] Card encontrado, iniciando captura...');
-            // Clonar o card para converter cores oklch sem afetar o original
-            console.log('🔄 [WEBHOOK] Clonando card para conversão de estilos...');
-            const clonedCard = cardElement.cloneNode(true);
-            clonedCard.style.position = 'absolute';
-            clonedCard.style.left = '-9999px';
-            clonedCard.style.top = '0';
-            document.body.appendChild(clonedCard);
-            // Converter todos os estilos para inline (navegador já converteu cores para rgb)
-            console.log('🎨 [WEBHOOK] Convertendo estilos para inline (oklch/oklab → rgb)...');
-            inlineAllStyles(clonedCard);
-            console.log('📸 [WEBHOOK] Capturando imagem do card...');
-            const canvas = await html2canvas(clonedCard, {
+            // Usar html-to-image que suporta cores modernas (oklch/oklab)
+            console.log('📸 [WEBHOOK] Capturando imagem com html-to-image (suporta oklch/oklab)...');
+            const imageBase64 = await toPng(cardElement, {
                 backgroundColor: '#ffffff',
-                scale: 2,
-                logging: false,
-                useCORS: true
+                pixelRatio: 2, // Mesma qualidade que scale: 2 do html2canvas
+                cacheBust: true,
+                skipFonts: false
             });
-            // Remover o clone do DOM
-            document.body.removeChild(clonedCard);
-            console.log('🧹 [WEBHOOK] Card clonado removido');
-            console.log('✅ [WEBHOOK] Canvas criado:', canvas.width, 'x', canvas.height);
-            const imageBase64 = canvas.toDataURL('image/png');
-            console.log('✅ [WEBHOOK] Imagem convertida para base64 (tamanho:', imageBase64.length, 'caracteres)');
+            console.log('✅ [WEBHOOK] Imagem capturada com sucesso!');
+            console.log('✅ [WEBHOOK] Base64 gerado (tamanho:', imageBase64.length, 'caracteres)');
             // Preparar dados para envio
             const webhookData = {
                 status: action === 'aprovar' ? 'aprovado' : 'negado',
